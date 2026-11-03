@@ -945,6 +945,10 @@ export type MakePayCheckoutSession = {
   status: string;
   canPay: boolean;
   canCancel: boolean;
+  orderId: string | null;
+  invoice: { amount: string; asset: string };
+  updatedAt: string;
+  settlementAmount: Record<string, unknown> | null;
   payment: {
     asset: string;
     symbol: string;
@@ -957,7 +961,9 @@ export type MakePayCheckoutSession = {
     qr: {
       addressOnly: string;
       withAmount: string;
-      amount: string;
+      defaultMode: "with_amount" | "address_only";
+      includesAmount: boolean;
+      amount: string | null;
       asset: string;
     } | null;
     pricingExpiresAt: string | null;

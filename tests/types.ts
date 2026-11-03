@@ -62,3 +62,19 @@ async function assertPartnerV1ResponseTypes() {
 }
 
 void assertPartnerV1ResponseTypes;
+
+async function headlessCheckoutTypes(client: MakePayClient) {
+  const quote = await client.createPaymentQuote("uid", { sellAsset: "BTC.BTC" }, { idempotencyKey: "order-quote-1" });
+  if (quote.status !== "preparing") {
+    const result = await client.createPaymentInstructions("uid", { sessionId: quote.sessionId, quoteVersion: quote.quoteVersion }, { idempotencyKey: "order-start-1" });
+    if (result.status !== "preparing" && "payment" in result) {
+      const session = result as import("../dist/index.js").MakePayCheckoutSession;
+      const mode: "with_amount" | "address_only" | undefined = session.payment.qr?.defaultMode;
+      const includesAmount: boolean | undefined = session.payment.qr?.includesAmount;
+      const amount: string | null = session.payment.amount;
+      const asset: string = session.invoice.asset;
+      void [mode, includesAmount, amount, asset];
+    }
+  }
+}
+void headlessCheckoutTypes;
