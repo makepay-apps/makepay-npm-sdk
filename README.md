@@ -584,3 +584,22 @@ try {
   }
 }
 ```
+
+## Headless checkout
+
+Render coin selection, payment amount, QR/address, memo, countdown, and progress
+on the merchant website using the merchant backend. Keep credentials on the
+server. The client now includes payment-options, quote, payment-instructions,
+session-status, and cancellation methods (snake_case in Python/Rust,
+PascalCase in Go).
+
+Create a one-time payment link per order, fetch its payment options, create a
+quote, display the exact crypto amount, then confirm its `sessionId` and
+`quoteVersion` to obtain payment instructions. Each mutation requires a stable
+idempotency key. Retry HTTP 202/preparing responses with the same arguments and
+key; create a new key only for a deliberate new operation. Poll the session
+by ID, display transfer details only when `canPay` is true, and fulfil orders
+from verified MakePay webhooks. Sandbox instructions must never receive funds.
+
+See the [headless checkout API guide](https://www.makecrypto.io/documentation/makepay/api/payment-links#headless-checkout-on-your-website)
+for request/response fields, expiry, required refund addresses, and retries.

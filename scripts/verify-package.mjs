@@ -96,8 +96,8 @@ function assertExactFiles(actualFiles, source) {
 if (packageJson.name !== "@makecrypto/makepay") {
   fail("package.json must publish @makecrypto/makepay.");
 }
-if (packageJson.version !== "0.4.0") {
-  fail("package.json must publish version 0.4.0.");
+if (packageJson.version !== "0.5.0") {
+  fail("package.json must publish version 0.5.0.");
 }
 if (
   JSON.stringify(packageJson.files) !==

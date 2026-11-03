@@ -2,6 +2,21 @@
 
 All notable changes to `@makecrypto/makepay` are documented here.
 
+## 0.5.0 - 2026-11-03
+
+### Added
+
+- Merchant headless checkout methods for payment options, quotes, confirmed
+  funding instructions, session progress, and cancellation.
+- Typed decimal-string amounts, network and memo details, funding deadlines,
+  quote-version confirmation, and asynchronous preparation responses.
+- Required mutation idempotency keys and HTTP contract checks for the new calls.
+
+### Compatibility
+
+- Existing hosted checkout, OAuth/DPoP, webhook, and transport protections remain.
+- Requires the production merchant headless checkout API.
+
 ## 0.4.0 - 2026-07-23
 
 ### Added

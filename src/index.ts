@@ -912,6 +912,75 @@ export type MakePayPublicRequestOptions = {
   fetch?: typeof fetch;
 };
 
+/** Headless mutations require a stable key, including retries after HTTP 202. */
+export type MakePayCheckoutMutationOptions = { idempotencyKey: string };
+export type MakePayCheckoutPreparing = {
+  status: "preparing";
+  requestId: string;
+  pollAfterSeconds: number;
+  errorCode: string;
+};
+export type MakePayCheckoutQuoteInput = {
+  sellAsset: string;
+  receiptEmail?: string;
+  refundAddress?: string;
+  lineItemSelection?: Record<string, unknown>;
+  slippage?: number;
+};
+export type MakePayCheckoutQuote = {
+  paymentLinkUid: string;
+  sessionId: string;
+  status: "quoted";
+  quoteVersion: string;
+  payable: { sellAsset: string; requiredSellAmount: string };
+  invoice: { amount: string; asset: string };
+  fees: Record<string, unknown> | null;
+  expiresAt: string;
+  hostedPaymentUrl: string;
+  sandboxMode: boolean;
+};
+export type MakePayCheckoutSession = {
+  paymentLinkUid: string;
+  sessionId: string;
+  status: string;
+  canPay: boolean;
+  canCancel: boolean;
+  payment: {
+    asset: string;
+    symbol: string;
+    network: string;
+    tokenContract: string | null;
+    amount: string | null;
+    address: string | null;
+    memo: string | null;
+    instructionType: string;
+    qr: {
+      addressOnly: string;
+      withAmount: string;
+      amount: string;
+      asset: string;
+    } | null;
+    pricingExpiresAt: string | null;
+    fundingExpiresAt: string | null;
+  };
+  hostedPaymentUrl: string;
+  sandboxMode: boolean;
+  pollAfterSeconds: number;
+  settlement: Record<string, unknown> | null;
+  resolutionStatus: string;
+  [key: string]: unknown;
+};
+export type MakePayCheckoutOptions = {
+  paymentLinkUid: string;
+  receiptEmailRequired: boolean;
+  hostedPaymentUrl: string;
+  options: Array<{
+    identifier: string;
+    requiresPayerRefundAddress?: boolean;
+    [key: string]: unknown;
+  }>;
+};
+
 export type MakePayIdempotencyOptions = {
   /** 8-200 URL-safe characters; reuse only for an identical mutation. */
   idempotencyKey?: string;
@@ -1029,7 +1098,7 @@ export class MakePayError extends Error {
 export class MakePayClient {
   static readonly defaultBaseUrl = "https://www.makecrypto.io";
   static readonly defaultCheckoutBaseUrl = "https://www.makepay.io";
-  static readonly version = "0.4.0";
+  static readonly version = "0.5.0";
 
   private readonly baseUrl: string;
   private readonly baseOrigin: string;
@@ -1101,6 +1170,72 @@ export class MakePayClient {
     return this.request(
       "GET",
       `/api/partner/v1/makepay/payment-links/${encodeURIComponent(uid)}`,
+    );
+  }
+
+  getPaymentOptions(uid: string): Promise<MakePayCheckoutOptions> {
+    assertNonEmpty(uid, "Payment link UID is required.");
+    return this.request(
+      "GET",
+      `/api/partner/v1/makepay/payment-links/${encodeURIComponent(uid)}/payment-options`,
+    );
+  }
+
+  createPaymentQuote(
+    uid: string,
+    payload: MakePayCheckoutQuoteInput,
+    options: MakePayCheckoutMutationOptions,
+  ): Promise<MakePayCheckoutQuote | MakePayCheckoutPreparing> {
+    assertNonEmpty(uid, "Payment link UID is required.");
+    assertNonEmpty(options.idempotencyKey, "Idempotency key is required.");
+    return this.request(
+      "POST",
+      `/api/partner/v1/makepay/payment-links/${encodeURIComponent(uid)}/quotes`,
+      payload,
+      options,
+    );
+  }
+
+  createPaymentInstructions(
+    uid: string,
+    payload: { sessionId: string; quoteVersion: string },
+    options: MakePayCheckoutMutationOptions,
+  ): Promise<MakePayCheckoutSession | MakePayCheckoutPreparing> {
+    assertNonEmpty(uid, "Payment link UID is required.");
+    assertNonEmpty(options.idempotencyKey, "Idempotency key is required.");
+    return this.request(
+      "POST",
+      `/api/partner/v1/makepay/payment-links/${encodeURIComponent(uid)}/payment-instructions`,
+      payload,
+      options,
+    );
+  }
+
+  getPaymentSession(
+    uid: string,
+    sessionId: string,
+  ): Promise<MakePayCheckoutSession> {
+    assertNonEmpty(uid, "Payment link UID is required.");
+    assertNonEmpty(sessionId, "Payment session ID is required.");
+    return this.request(
+      "GET",
+      `/api/partner/v1/makepay/payment-links/${encodeURIComponent(uid)}/payment-sessions/${encodeURIComponent(sessionId)}`,
+    );
+  }
+
+  cancelPaymentSession(
+    uid: string,
+    sessionId: string,
+    options: MakePayCheckoutMutationOptions,
+  ): Promise<MakePayCheckoutSession | MakePayCheckoutPreparing> {
+    assertNonEmpty(uid, "Payment link UID is required.");
+    assertNonEmpty(sessionId, "Payment session ID is required.");
+    assertNonEmpty(options.idempotencyKey, "Idempotency key is required.");
+    return this.request(
+      "POST",
+      `/api/partner/v1/makepay/payment-links/${encodeURIComponent(uid)}/payment-sessions/${encodeURIComponent(sessionId)}/cancel`,
+      {},
+      options,
     );
   }
 
