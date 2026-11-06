@@ -1457,3 +1457,47 @@ assert.throws(() => {
 }, MakePayError);
 
 console.log("MakePay npm SDK tests passed.");
+
+// Headless requests preserve exact bodies and keys, including HTTP 202.
+const headlessRequests = [];
+const headless = new MakePayClient({
+  keyId: "key",
+  keySecret: "secret",
+  fetch: async (url, init) => {
+    headlessRequests.push({ url: String(url), init });
+    return Response.json(
+      { status: "preparing", requestId: "request", pollAfterSeconds: 3 },
+      { status: 202 },
+    );
+  },
+});
+await headless.getPaymentOptions("order/1");
+const preparing = await headless.createPaymentQuote(
+  "order/1",
+  { sellAsset: "BTC.BTC" },
+  { idempotencyKey: "order-quote-1" },
+);
+await headless.createPaymentInstructions(
+  "order/1",
+  { sessionId: "session", quoteVersion: "version" },
+  { idempotencyKey: "order-start-1" },
+);
+await headless.getPaymentSession("order/1", "session/1");
+await headless.cancelPaymentSession("order/1", "session/1", {
+  idempotencyKey: "order-cancel-1",
+});
+assert.equal(preparing.status, "preparing");
+assert.match(headlessRequests[0].url, /order%2F1\/payment-options$/);
+assert.equal(
+  new Headers(headlessRequests[1].init.headers).get("idempotency-key"),
+  "order-quote-1",
+);
+assert.deepEqual(JSON.parse(headlessRequests[2].init.body), {
+  sessionId: "session",
+  quoteVersion: "version",
+});
+assert.match(headlessRequests[3].url, /payment-sessions\/session%2F1$/);
+assert.equal(
+  new Headers(headlessRequests[4].init.headers).get("idempotency-key"),
+  "order-cancel-1",
+);
